@@ -50,6 +50,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.bukupanci.ui.theme.BukuPanciTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 // ============ KOMPONEN KECIL (dipakai Stateless di bawah) ============
 
@@ -197,57 +199,31 @@ fun PenghitungWaktu(
 // ============ STATEFUL: pengelola state ============
 @Composable
 fun BahanCaraResepScreen(
-    judulDraf: String = "",
+    viewModel: TambahResepViewModel = viewModel(),
     onBackClick: () -> Unit = {},
     onNextClick: () -> Unit = {}
 ) {
-    // Input pengguna -> rememberSaveable. Awalnya masing-masing punya satu kolom kosong.
-    var daftarBahan by rememberSaveable { mutableStateOf(listOf("")) }
-    // Judul dan isi langkah disimpan di dua list; posisi (index) yang sama = langkah yang sama
-    var daftarJudulLangkah by rememberSaveable { mutableStateOf(listOf("")) }
-    var daftarIsiLangkah by rememberSaveable { mutableStateOf(listOf("")) }
-    var menit by rememberSaveable { mutableStateOf(0) }
-    var detik by rememberSaveable { mutableStateOf(0) }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     StatelessBahanCaraResep(
-        judulDraf = judulDraf,
-        daftarBahan = daftarBahan,
-        // Ganti isi bahan pada posisi index saja, sisanya tetap
-        onBahanChange = { index, teks ->
-            daftarBahan = daftarBahan.mapIndexed { i, lama -> if (i == index) teks else lama }
-        },
-        // Buang bahan pada posisi index
-        onBahanHapus = { index ->
-            daftarBahan = daftarBahan.filterIndexed { i, _ -> i != index }
-        },
-        onBahanTambah = { daftarBahan = daftarBahan + "" },
-        // Saran cepat: buang kolom kosong dulu, lalu tambahkan saran
-        onSaranClick = { saran ->
-            daftarBahan = daftarBahan.filter { it.isNotBlank() } + saran
-        },
-        daftarJudulLangkah = daftarJudulLangkah,
-        daftarIsiLangkah = daftarIsiLangkah,
-        onJudulLangkahChange = { index, teks ->
-            daftarJudulLangkah = daftarJudulLangkah.mapIndexed { i, lama -> if (i == index) teks else lama }
-        },
-        onIsiLangkahChange = { index, teks ->
-            daftarIsiLangkah = daftarIsiLangkah.mapIndexed { i, lama -> if (i == index) teks else lama }
-        },
-        // Dua list harus dihapus bersamaan agar tetap sejajar
-        onLangkahHapus = { index ->
-            daftarJudulLangkah = daftarJudulLangkah.filterIndexed { i, _ -> i != index }
-            daftarIsiLangkah = daftarIsiLangkah.filterIndexed { i, _ -> i != index }
-        },
-        onLangkahTambah = {
-            daftarJudulLangkah = daftarJudulLangkah + ""
-            daftarIsiLangkah = daftarIsiLangkah + ""
-        },
-        menit = menit,
-        onMenitKurang = { menit = menit - 1 },
-        onMenitTambah = { menit = menit + 1 },
-        detik = detik,
-        onDetikKurang = { detik = detik - 1 },
-        onDetikTambah = { detik = detik + 1 },
+        judulDraf = uiState.judul,
+        daftarBahan = uiState.daftarBahan,
+        onBahanChange = { index, teks -> viewModel.onBahanChange(index, teks) },
+        onBahanHapus = { index -> viewModel.onBahanHapus(index) },
+        onBahanTambah = { viewModel.onBahanTambah() },
+        onSaranClick = { saran -> viewModel.onSaranClick(saran) },
+        daftarJudulLangkah = uiState.daftarJudulLangkah,
+        daftarIsiLangkah = uiState.daftarIsiLangkah,
+        onJudulLangkahChange = { index, teks -> viewModel.onJudulLangkahChange(index, teks) },
+        onIsiLangkahChange = { index, teks -> viewModel.onIsiLangkahChange(index, teks) },
+        onLangkahHapus = { index -> viewModel.onLangkahHapus(index) },
+        onLangkahTambah = { viewModel.onLangkahTambah() },
+        menit = uiState.menit,
+        onMenitKurang = { viewModel.onMenitChange(uiState.menit - 1) },
+        onMenitTambah = { viewModel.onMenitChange(uiState.menit + 1) },
+        detik = uiState.detik,
+        onDetikKurang = { viewModel.onDetikChange(uiState.detik - 1) },
+        onDetikTambah = { viewModel.onDetikChange(uiState.detik + 1) },
         onBackClick = onBackClick,
         onNextClick = onNextClick
     )
@@ -508,6 +484,6 @@ fun StatelessBahanCaraResep(
 @Composable
 fun PreviewBahanCaraResep() {
     BukuPanciTheme {
-        BahanCaraResepScreen(judulDraf = "Ayam Bakar Madu Pedas")
+        BahanCaraResepScreen()
     }
 }

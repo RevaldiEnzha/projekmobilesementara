@@ -32,6 +32,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.bukupanci.ui.screen.TambahResepViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,63 +42,42 @@ class MainActivity : ComponentActivity() {
         setContent {
             BukuPanciTheme {
                 val navController = rememberNavController()
-                NavHost(navController = navController, startDestination = "home") {
+                // Satu ViewModel dipakai bersama oleh tiga layar (dibuat di level Activity)
+                val tambahResepViewModel: TambahResepViewModel = viewModel()
 
-                    // ===== BAGIAN RAJA: halaman Home =====
-                    // Raja tinggal mengganti isi blok ini dengan HomeScreen miliknya
-                    composable("home") {
-                        HomeSementara(
-                            onTambahResepClick = {
-                                navController.navigate("info_dasar") {
-                                    launchSingleTop = true
-                                }
-                            }
-                        )
-                    }
+                NavHost(navController = navController, startDestination = "info_dasar") {
 
-                    // ===== BAGIAN KAMU: alur tambah resep =====
-                    // Tahap 4.1: layar 1 (Info Dasar)
+                    // Tahap 5.1: layar 1 (Info Dasar)
                     composable("info_dasar") {
                         InfoDasarResepScreen(
-                            onBackClick = { navController.popBackStack() },
-                            onNextClick = { judul ->
-                                navController.navigate("bahan_cara/${Uri.encode(judul)}") {
-                                    launchSingleTop = true
-                                }
+                            viewModel = tambahResepViewModel,
+                            onNextClick = {
+                                navController.navigate("bahan_cara") { launchSingleTop = true }
                             }
                         )
                     }
 
-                    // Tahap 4.2: layar 2 (Bahan & Cara)
-                    composable(
-                        route = "bahan_cara/{judul}",
-                        arguments = listOf(navArgument("judul") { type = NavType.StringType })
-                    ) { backStackEntry ->
-                        val judul = backStackEntry.arguments?.getString("judul") ?: ""
+                    // Tahap 5.2: layar 2 (Bahan & Cara)
+                    composable("bahan_cara") {
                         BahanCaraResepScreen(
-                            judulDraf = judul,
+                            viewModel = tambahResepViewModel,
                             onBackClick = { navController.popBackStack() },
                             onNextClick = {
-                                navController.navigate("foto/${Uri.encode(judul)}") {
-                                    launchSingleTop = true
-                                }
+                                navController.navigate("foto") { launchSingleTop = true }
                             }
                         )
                     }
 
-                    // Tahap 4.3: layar 3 (Foto)
-                    composable(
-                        route = "foto/{judul}",
-                        arguments = listOf(navArgument("judul") { type = NavType.StringType })
-                    ) { backStackEntry ->
-                        val context = LocalContext.current
-                        val judul = backStackEntry.arguments?.getString("judul") ?: ""
+                    // Tahap 5.3: layar 3 (Foto + simpan)
+                    composable("foto") {
                         FotoResepScreen(
-                            judulDraf = judul,
+                            viewModel = tambahResepViewModel,
                             onBackClick = { navController.popBackStack() },
-                            onSaveClick = {
-                                // Sementara: penyimpanan belum dikerjakan
-                                Toast.makeText(context, "Fitur simpan menyusul", Toast.LENGTH_SHORT).show()
+                            onSelesai = {
+                                // Sementara: kembali ke form kosong. Nanti diarahkan ke halaman Recipes.
+                                navController.navigate("info_dasar") {
+                                    popUpTo("info_dasar") { inclusive = true }
+                                }
                             }
                         )
                     }

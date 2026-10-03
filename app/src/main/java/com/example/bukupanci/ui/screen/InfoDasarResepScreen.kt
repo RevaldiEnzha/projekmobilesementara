@@ -34,29 +34,27 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.ui.Alignment
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 // ============ STATEFUL: pengelola state ============
 @Composable
 fun InfoDasarResepScreen(
+    viewModel: TambahResepViewModel = viewModel(),
     onBackClick: () -> Unit = {},
-    onNextClick: (String) -> Unit = {}   // masih membawa judul saja
+    onNextClick: () -> Unit = {}
 ) {
-    // Input pengguna -> rememberSaveable
-    var judulResep by rememberSaveable { mutableStateOf("") }
-    // Porsi bertipe Int (cocok dengan Recipe.servings), awalnya 1
-    var porsi by rememberSaveable { mutableStateOf(1) }
-    // Deskripsi opsional, boleh kosong
-    var deskripsi by rememberSaveable { mutableStateOf("") }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     StatelessInfoDasarResep(
-        judulResep = judulResep,
-        onJudulResepChange = { judulResep = it },
-        porsi = porsi,
-        onPorsiChange = { porsi = it },
-        deskripsi = deskripsi,
-        onDeskripsiChange = { deskripsi = it },
+        judulResep = uiState.judul,
+        onJudulResepChange = { viewModel.onJudulChange(it) },
+        porsi = uiState.porsi,
+        onPorsiChange = { viewModel.onPorsiChange(it) },
+        deskripsi = uiState.deskripsi,
+        onDeskripsiChange = { viewModel.onDeskripsiChange(it) },
         onBackClick = onBackClick,
-        onNextClick = { onNextClick(judulResep.trim()) }
+        onNextClick = onNextClick
     )
 }
 

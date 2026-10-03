@@ -39,24 +39,45 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.bukupanci.ui.theme.BukuPanciTheme
+import android.widget.Toast
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.bukupanci.BukuPanciApp
 
 // ============ STATEFUL: pengelola state ============
 @Composable
 fun FotoResepScreen(
-    judulDraf: String = "",
+    viewModel: TambahResepViewModel = viewModel(),
     onBackClick: () -> Unit = {},
-    onSaveClick: () -> Unit = {}
+    onSelesai: () -> Unit = {}
 ) {
-    // Foto dari galeri (Uri kecil, aman disimpan rememberSaveable)
-    var imageUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+    val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Jalan setiap isTersimpan berubah. Kalau sudah tersimpan: beri kabar, kosongkan form, pindah layar
+    LaunchedEffect(uiState.isTersimpan) {
+        if (uiState.isTersimpan) {
+            Toast.makeText(context, "Resep berhasil disimpan", Toast.LENGTH_SHORT).show()
+            viewModel.resetForm()
+            onSelesai()
+        }
+    }
 
     StatelessFotoResep(
-        judulDraf = judulDraf,
-        imageUri = imageUri,
-        onGaleriDipilih = { imageUri = it },
-        onFotoHapus = { imageUri = null },
+        judulDraf = uiState.judul,
+        imageUri = uiState.imageUri,
+        isMenyimpan = uiState.isMenyimpan,
+        pesanError = uiState.pesanError,
+        onGaleriDipilih = { viewModel.onImageUriChange(it) },
+        onFotoHapus = { viewModel.onImageUriChange(null) },
         onBackClick = onBackClick,
-        onSaveClick = onSaveClick
+        onSaveClick = {
+            // Repository diambil dari Application (BukuPanciApp buatan Raja)
+            val app = context.applicationContext as BukuPanciApp
+            viewModel.simpanResep(app.recipeRepository)
+        }
     )
 }
 
@@ -66,6 +87,8 @@ fun FotoResepScreen(
 fun StatelessFotoResep(
     judulDraf: String,
     imageUri: Uri?,
+    isMenyimpan: Boolean,
+    pesanError: String?,
     onGaleriDipilih: (Uri) -> Unit,
     onFotoHapus: () -> Unit,
     onBackClick: () -> Unit,
@@ -164,6 +187,15 @@ fun StatelessFotoResep(
                 }
             }
 
+            // Pesan error ramah kalau penyimpanan gagal
+            if (pesanError != null) {
+                Text(
+                    text = pesanError,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
             // Pendorong: membuat tombol bawah turun ke dasar layar
             Spacer(modifier = Modifier.weight(1f))
 
@@ -177,9 +209,13 @@ fun StatelessFotoResep(
                 }
                 Button(
                     onClick = onSaveClick,
+                    enabled = !isMenyimpan,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Simpan Resep", style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        text = if (isMenyimpan) "Menyimpan..." else "Simpan Resep",
+                        style = MaterialTheme.typography.labelLarge
+                    )
                 }
             }
         }
@@ -195,6 +231,6 @@ fun StatelessFotoResep(
 @Composable
 fun PreviewFotoResep() {
     BukuPanciTheme {
-        FotoResepScreen(judulDraf = "Ayam Bakar Madu Pedas")
+        FotoResepScreen()
     }
 }
